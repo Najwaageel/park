@@ -1,5 +1,6 @@
 # Backend routes 
 
+## USER
 | HTTP Method | URL | Request Body | Success status | Error Status | Description |
 |-------------|-----|--------------|----------------|--------------|-------------|
 | POST | /signup | {firstName, lastName, email, password, avatar} | 201 | 400 |  |
