@@ -32,6 +32,8 @@ const gameSchema = new mongoose.Schema({
    ],
 })
 
+
+
 const gameAddJoi = Joi.object({
     name: Joi.string().min(1).max(100).required(),
     image: Joi.string().uri().min(5).max(1000).required(), 

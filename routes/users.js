@@ -1,6 +1,6 @@
 const express = require("express")
 const router = express.Router()
-const { User, signupJoi, loginJoi, profileJoi, forgotPasswordJoi, resetPasswordJoi  } = require("../models/User")
+const { User, signupJoi, loginJoi, profileJoi } = require("../models/User")
 const { Comment } = require("../models/Comment")
 const jwt = require("jsonwebtoken")
 const bcrypt = require("bcrypt")
@@ -9,6 +9,7 @@ const checkAdmin = require("../middleware/checkAdmin")
 const validateBody = require("../middleware/validateBody")
 const checkId = require("../middleware/checkId")
 const nodemailer = require("nodemailer")
+const { Ticket } = require("../models/Ticket")
 
 
 // ------------------------- sign ----------------------//
@@ -32,46 +33,10 @@ router.post("/signup", validateBody(signupJoi), async (req, res) => {
         emailVerified: false,
         role: "User",
       })
-  
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        port: 587,
-        secure: false,
-        auth: {
-          user: "ageelnajwa@gmail.com",
-          pass: "N12345678!",
-        },
-      })
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: "15d" })
-  
-      await transporter.sendMail({
-        from: `"test test" <ageelnajwa@gmail.com>`,
-        to: email,
-        subject: "Email verification",
-  
-        html: `Hello, please click on this link to verify your email.
-        <a href="http://localhost:3000/email_verified/${token}" > Verify email </a>`,
-      })
-  
-      await user.save()
+        await user.save()
   
       delete user._doc.password
-  
-      res.send("user created, please check your email for verification link")
-    } catch (error) {
-      res.status(500).send(error.message)
-    }
-  })
-  
-  router.get("/Verify_email/:token", async (req, res) => {
-    try {
-      const decryptedToken = jwt.verify(req.params.token, process.env.JWT_SECRET_KEY)
-      const userId = decryptedToken.id
-  
-      const user = await User.findByIdAndUpdate(userId, { $set: { emailVerified: true } })
-      if (!user) return res.status(404).send("user not found")
-  
-      res.send("user verified")
+      res.send("sign seccess")
     } catch (error) {
       res.status(500).send(error.message)
     }
@@ -89,7 +54,6 @@ router.post("/signup", validateBody(signupJoi), async (req, res) => {
       const valid = await bcrypt.compare(password, user.password) 
       if (!valid) return res.status(400).send("password incorrect")
   
-      if (!user.emailVerified) return res.status(403).send("user not verified, please check your email")
   
       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, { expiresIn: "90d" }) 
   
@@ -117,64 +81,13 @@ router.post("/signup", validateBody(signupJoi), async (req, res) => {
     }
   })
 
-  router.post("/forgot-password", validateBody(forgotPasswordJoi), async (req,res) =>{
-    try {
-         const { email } = req.body
-         const user = await User.findOne({ email })
-         if (!user) return res.status(404).send("user not found")
-  
-         const transporter = nodemailer.createTransport({
-          service: "gmail",
-          port: 587,
-          secure: false,
-          auth: {
-            user: "ageelnajwa@gmail.com",
-            pass: "N12345678!", 
-         },
-        })
-  
-        const token = jwt.sign({ id: user._id, forgotPassword: true }, process.env.JWT_SECRET_KEY, { expiresIn: "15d" })
-        
-        await transporter.sendMail({
-          from: `"test test" <ageelnajwa@gmail.com>`,
-          to: email,
-          subject: "Reset Password",
-    
-          html: `Hello, please click on this link to reset your password.
-          <a href="http://localhost:3000/reset-password/${token}" > Reset Password </a>`,
-        })
-  
-  res.send("reset password link sent")
-    } catch (error) {
-      res.status(500).send(error.message)
-    }
-  })
-  
-  router.post("/reset-password/:token", validateBody(resetPasswordJoi), async (req, res) =>{
-    try {
-      const decryptedToken = jwt.verify(req.params.token, process.env.JWT_SECRET_KEY)
-  
-      if(!decryptedToken.forgotPassword) return res.status(403).send("unauthorized action")
-      const userId = decryptedToken.id
-      const user = await User.findById(userId)
-      if(!user) return res.status(404).send("user not found")
-  
-      const { password } = req.body
-      const salt = await bcrypt.genSalt(10) 
-      const hash = await bcrypt.hash(password, salt)
-  
-      await User.findByIdAndUpdate(userId, { $set: { password: hash } })
-  
-  res.send("password reset")
-    } catch (error) {
-      res.status(500).send(error.message)
-    }
-  })
-
 // ------------------------- profile --------------------- //
 
   router.get("/profile", checkToken, async (req, res) => {
-    const user = await User.findById(req.userId).select("-__v -password")
+    const user = await User.findById(req.userId).select("-__v -password").populate("likes").populate({
+      path: "tickets",
+      populate: ["owner", "gameId"]
+    })
     res.json(user)
   })
   router.put("/profile", checkToken, validateBody(profileJoi), async (req, res) => {
@@ -245,6 +158,15 @@ router.post("/signup", validateBody(signupJoi), async (req, res) => {
     } catch (error) {
       res.status(500).send(error.message)
     }
+  })
+  router.get("/gametickets", async (req, res) => {
+    try{
+    const tickets = await Ticket.find().populate("owner").populate("gameId")
+    res.json(tickets)
+  } catch (error) {
+        console.log(error)
+        res.status(500).send(error.message)
+      }
   })
   
   module.exports = router
