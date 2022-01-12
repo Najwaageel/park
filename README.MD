@@ -13,3 +13,6 @@
 | GET | /gametickets | | 200 | 500 | |
 
 
+### -Game
+| HTTP Method | URL | Request Body | Success status | Error Status | Description |
+|-------------|-----|--------------|----------------|--------------|-------------|
