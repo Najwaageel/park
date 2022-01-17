@@ -11,7 +11,7 @@ const users = require("./routes/users")
 const games = require("./routes/games")
 
 mongoose
-  .connect(`mongodb://localhost:27017/gamesDB`)
+  .connect(`mongodb+srv://najwa:${process.env.MONGODB_PASSWORD1}@cluster0.hrnbt.mongodb.net/gamesDB?retryWrites=true&w=majority`)
   .then(() => console.log(" Connected to MongoDB"))
   .catch(error => console.log("Error connecting to MongoDB", error))
 
